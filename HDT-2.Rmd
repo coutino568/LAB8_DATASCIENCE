@@ -1,0 +1,228 @@
+---
+title: "HDT2"
+output: html_document
+date: '2022-08-01'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages("forecast")
+##install.packages("fUnitRoots")
+#install.packages("ggfortify")
+
+library(forecast)
+library(tseries)
+library(fUnitRoots)
+library(ggfortify)
+library(readxl)
+getwd()
+df_consumo <- read_excel("CONSUMO-2022-05.xlsx", range="B7:G276")
+df_importacion <- read_excel("IMPORTACION-VOLUMEN-2022-05.xlsx", range="B7:G264")
+```
+```{r}
+df_consumo
+```
+
+```{r}
+df_importacion
+```
+```{r}
+df_consumo$Diesel <- df_consumo$`Diesel alto azufre`+df_consumo$`Diesel bajo azufre`
+df_consumo$`Diesel alto azufre` <- NULL
+df_consumo$`Diesel bajo azufre` <- NULL
+df_consumo[4] <- NULL
+head(df_consumo)
+
+
+
+summary(df_consumo)
+plot(df_consumo$Fecha, df_consumo$`Gasolina superior`, xlab="FECHA", ylab="CONSUMO GASOLINA SUPERIOR", col= "blue")
+points(df_consumo$Fecha, df_consumo$Diesel, col = "green", pch = 19)
+points(df_consumo$Fecha, df_consumo$`Gasolina regular`, col = "red", pch = 19)
+
+
+height<- dnorm(df_consumo$`Gasolina superior`, mean(df_consumo$`Gasolina superior`), sd(df_consumo$`Gasolina superior`))
+plot(df_consumo$`Gasolina superior`, height)
+
+```
+```{r}
+df_importacion$Diesel <- df_importacion$`Diesel alto azufre`+df_importacion$`Diesel bajo azufre`
+df_importacion$`Diesel alto azufre` <- NULL
+df_importacion$`Diesel bajo azufre` <- NULL
+df_importacion[4] <- NULL
+head(df_importacion)
+```
+```{r}
+
+Consumo_Diesel <- ts(df_consumo$Diesel, start=c(2000, 1), frequency = 12)
+Consumo_regular <- ts(df_consumo$`Gasolina regular`, start=c(2000, 1), frequency = 12)
+Consumo_super <- ts(df_consumo$`Gasolina superior`, start=c(2000, 1), frequency = 12)
+importacion_Diesel <- ts(df_importacion$Diesel, start=c(2000, 1), frequency = 12)
+importacion_regular <- ts(df_importacion$`Gasolina regular`, start=c(2000, 1), frequency = 12)
+importacion_super <- ts(df_importacion$`Gasolina superior`, start=c(2000, 1), frequency = 12)
+
+
+plot(Consumo_Diesel)
+plot(Consumo_regular)
+plot(Consumo_super)
+plot(importacion_Diesel)
+plot(importacion_regular)
+plot(importacion_super)
+
+```
+```{r}
+dec_cons_super <- decompose(Consumo_super)
+plot(dec_cons_super)
+```
+
+
+```{r}
+dec_cons_Diesel <- decompose(Consumo_Diesel)
+plot(dec_cons_Diesel)
+```
+
+
+```{r}
+dec_cons_regular <- decompose(Consumo_regular)
+plot(dec_cons_regular)
+```
+```{r}
+dec_imp_super <- decompose(importacion_super)
+plot(dec_imp_super)
+```
+```{r}
+dec_imp_diesel <- decompose(importacion_Diesel)
+plot(dec_imp_diesel)
+```
+```{r}
+dec_imp_regular <- decompose(importacion_regular)
+plot(dec_imp_regular)
+```
+```{r}
+plot(Consumo_Diesel)
+trans_cons_diesel<-diff(BoxCox(Consumo_Diesel, 20.5))
+plot(trans_cons_diesel)
+acf(trans_cons_diesel)
+adfTest(trans_cons_diesel)
+```
+```{r}
+plot(Consumo_super)
+trans_cons_super<-diff(BoxCox(Consumo_super, 15))
+plot(trans_cons_super)
+acf(trans_cons_super)
+adfTest(trans_cons_super)
+```
+```{r}
+plot(Consumo_regular)
+trans_cons_regular<-diff(BoxCox(Consumo_regular, 18))
+plot(trans_cons_regular)
+acf(trans_cons_regular)
+adfTest(trans_cons_regular)
+```
+```{r}
+plot(importacion_Diesel)
+trans_imp_diesel<-diff(BoxCox(importacion_Diesel, 15.5))
+plot(trans_imp_diesel)
+acf(trans_imp_diesel)
+adfTest(trans_imp_diesel)
+```
+```{r}
+plot(importacion_super)
+trans_imp_super<-diff(BoxCox(importacion_super, 8.6))
+plot(trans_imp_super)
+acf(trans_imp_super)
+adfTest(trans_imp_super)
+```
+```{r}
+plot(importacion_regular)
+trans_imp_regular<-diff(BoxCox(importacion_regular, 26.0634467))
+plot(trans_imp_regular)
+acf(trans_imp_regular)
+adfTest(trans_imp_regular)
+
+```
+
+
+```{r}
+
+
+adfTest(Consumo_super)
+adfTest(diff(Consumo_super))
+
+
+adfTest(Consumo_regular)
+adfTest(diff(Consumo_regular))
+
+adfTest(Consumo_Diesel)
+adfTest(diff(Consumo_Diesel))
+
+
+
+adfTest(importacion_Diesel)
+adfTest(diff(importacion_Diesel))
+
+
+adfTest(importacion_regular)
+adfTest(diff(importacion_regular))
+
+adfTest(importacion_super)
+adfTest(diff(importacion_super))
+
+## MODELOS DIESEL
+auto.arima(Consumo_Diesel)
+
+fit_consumo_diesel <- arima(log(Consumo_Diesel), c(3, 0, 1),seasonal = list(order = c(1, 1, 2), period = 12))
+forecastAP_Consumo_Diesel <- forecast(fit_consumo_diesel, level = c(95), h = 3*12)
+autoplot(forecastAP_Consumo_Diesel)
+
+pred <- predict(fit_consumo_diesel, n.ahead = 3*12)
+ts.plot(Consumo_Diesel,2.756^pred$pred, log = "y", lty = c(1,3))
+
+
+
+
+auto.arima(importacion_Diesel)
+
+fit_importacion_diesel <- arima(log(importacion_Diesel), c(3, 1, 1),seasonal = list(order = c(1, 1, 2), period = 12))
+forecastAP_Importacion_Diesel <- forecast(fit_importacion_diesel, level = c(95), h = 3*12)
+autoplot(forecastAP_Importacion_Diesel)
+
+pred <- predict(fit_importacion_diesel, n.ahead = 3*12)
+ts.plot(importacion_Diesel,2.756^pred$pred, log = "y", lty = c(1,3))
+
+## REGULAR
+
+auto.arima(importacion_regular)
+
+fit_importacion_regular <- arima(log(importacion_regular), c(1, 1, 2),seasonal = list(order = c(1, 1, 2), period = 12))
+forecastAP_Importacion_Regular <- forecast(fit_importacion_regular, level = c(95), h = 3*12)
+autoplot(forecastAP_Importacion_Regular)
+
+
+auto.arima(Consumo_regular)
+
+fit_consumo_regular <- arima(log(Consumo_regular), c(1, 1, 1),seasonal = list(order = c(2, 0, 0), period = 12))
+forecastAP_Consumo_Regular <- forecast(fit_consumo_regular, level = c(95), h = 3*12)
+autoplot(forecastAP_Consumo_Regular)
+
+## super
+auto.arima(Consumo_super)
+
+fit_consumo_super <- arima(log(Consumo_super), c(1, 1, 1),seasonal = list(order = c(2, 0, 0), period = 12))
+forecastAP_Consumo_Super <- forecast(fit_consumo_super, level = c(95), h = 3*12)
+autoplot(forecastAP_Consumo_Super)
+
+
+auto.arima(importacion_super)
+
+fit_importacion_super <- arima(log(importacion_super), c(2, 1, 1),seasonal = list(order = c(2, 0, 0), period = 12))
+forecastAP_importacion_Super <- forecast(fit_importacion_super, level = c(95), h = 3*12)
+autoplot(forecastAP_importacion_Super)
+
+
+```
+
+

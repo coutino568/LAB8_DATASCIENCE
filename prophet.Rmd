@@ -1,0 +1,120 @@
+---
+title: "prophet"
+output: html_document
+date: '2022-08-09'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages('prophet')
+
+library(prophet)
+library(readxl)
+getwd()
+df_consumo <- read_excel("CONSUMO-2022-05.xlsx", range="B7:G276")
+df_importacion <- read_excel("IMPORTACION-VOLUMEN-2022-05.xlsx", range="B7:G264")
+```
+```{r}
+df_cons_diesel <- df_consumo
+
+df_cons_diesel$ds <- as.Date(df_consumo$Fecha, format="%Y%m%d")
+df_cons_diesel$y <- df_consumo$`Diesel bajo azufre`+df_consumo$`Diesel alto azufre`
+
+
+
+df_cons_diesel$Fecha <- NULL
+df_cons_diesel$`Gasolina superior` <- NULL
+df_cons_diesel$`Diesel alto azufre` <- NULL
+df_cons_diesel$`Diesel bajo azufre` <- NULL
+df_cons_diesel$`Gasolina regular` <- NULL
+df_cons_diesel[1] <- NULL
+
+df_cons_reg <- df_cons_diesel
+
+df_cons_reg$y <- df_consumo$`Gasolina regular`
+
+df_cons_super <- df_cons_diesel
+
+df_cons_super$y <- df_consumo$`Gasolina superior`
+
+df_cons_diesel
+df_cons_reg
+df_cons_super
+```
+```{r}
+df_imp_diesel <- df_importacion
+
+df_imp_diesel$ds <- as.Date(df_importacion$Fecha, format="%Y%m%d")
+df_imp_diesel$y <- df_importacion$`Diesel bajo azufre`+df_importacion$`Diesel alto azufre`
+
+
+
+df_imp_diesel$Fecha <- NULL
+df_imp_diesel$`Gasolina superior` <- NULL
+df_imp_diesel$`Diesel alto azufre` <- NULL
+df_imp_diesel$`Diesel bajo azufre` <- NULL
+df_imp_diesel$`Gasolina regular` <- NULL
+df_imp_diesel[1] <- NULL
+
+df_imp_reg <- df_imp_diesel
+
+df_imp_reg$y <- df_importacion$`Gasolina regular`
+
+df_imp_super <- df_imp_diesel
+
+df_imp_super$y <- df_importacion$`Gasolina superior`
+
+df_imp_diesel
+df_imp_reg
+df_imp_super
+```
+```{r}
+prophet_cons_diesel <- prophet(df_cons_diesel, weekly.seasonality = TRUE, daily.seasonality = TRUE)
+prophet_cons_reg <-    prophet(df_cons_reg   , weekly.seasonality = TRUE, daily.seasonality = TRUE)
+prophet_cons_super <-  prophet(df_cons_super , weekly.seasonality = TRUE, daily.seasonality = TRUE)
+
+prophet_imp_diesel <- prophet(df_imp_diesel, weekly.seasonality = TRUE, daily.seasonality = TRUE)
+prophet_imp_reg <-    prophet(df_imp_reg   , weekly.seasonality = TRUE, daily.seasonality = TRUE)
+prophet_imp_super <-  prophet(df_imp_super , weekly.seasonality = TRUE, daily.seasonality = TRUE)
+```
+```{r}
+future_cons <- make_future_dataframe(prophet_cons_diesel, periods = 365)
+forecast_cons_diesel <- predict(prophet_cons_diesel, future_cons)
+tail(forecast_cons_diesel)
+```
+```{r}
+forecast_cons_reg <- predict(prophet_cons_reg, future_cons)
+tail(forecast_cons_reg)
+```
+```{r}
+forecast_cons_super <- predict(prophet_cons_super, future_cons)
+tail(forecast_cons_super)
+```
+```{r}
+future_imp = make_future_dataframe(prophet_imp_diesel, periods = 365)
+forecast_imp_diesel <- predict(prophet_imp_diesel, future_imp)
+tail(forecast_imp_diesel)
+```
+```{r}
+forecast_imp_reg <- predict(prophet_imp_reg, future_imp)
+tail(forecast_imp_reg)
+```
+```{r}
+forecast_imp_super <- predict(prophet_imp_super, future_imp)
+tail(forecast_imp_super)
+```
+```{r}
+plot(prophet_cons_diesel, forecast_cons_diesel)
+plot(prophet_cons_reg, forecast_cons_reg)
+plot(prophet_cons_super, forecast_cons_super)
+
+plot(prophet_imp_diesel, forecast_imp_diesel)
+plot(prophet_imp_reg, forecast_imp_reg)
+plot(prophet_imp_super, forecast_imp_super)
+```
+
+
+
