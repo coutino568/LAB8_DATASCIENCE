@@ -6,6 +6,8 @@ date: '2022-08-01'
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+install.packages("shiny")
 ```
 
 ```{r}
@@ -22,8 +24,91 @@ getwd()
 df_consumo <- read_excel("CONSUMO-2022-05.xlsx", range="B7:G276")
 df_importacion <- read_excel("IMPORTACION-VOLUMEN-2022-05.xlsx", range="B7:G264")
 ```
+
 ```{r}
-df_consumo
+library(shiny)
+#runExample("01_hello")
+
+ui <- fluidPage(
+
+  # App title ----
+  titlePanel("COSNUMO DE COMBUSTIBLES"),
+
+  # Sidebar layout with input and output definitions ----
+  sidebarLayout(
+
+    # Sidebar panel for inputs ----
+    sidebarPanel(
+
+      # Input: Slider for the number of bins ----
+      sliderInput(inputId = "bins",
+                  label = "Number of bins:",
+                  min = 1,
+                 max = 50,
+                  value = 30),
+
+      selectInput(
+        inputId="typesOfFuel",
+        label="Types Of Fuel",
+        list("SUPER","REGULAR","DIESEL"),
+        selected = NULL,
+        multiple = TRUE,
+        selectize = TRUE,
+        width = NULL,
+        size = NULL
+        ),
+      selectInput(
+        inputId="typeOfMetric",
+        label="Types Of Fuel",
+        list("CONSUMO","IMPORTACION"),
+        selected = NULL,
+        multiple = FALSE,
+        selectize = TRUE,
+        width = NULL,
+        size = NULL
+        )
+      
+      
+      
+      ),
+    
+
+    # Main panel for displaying outputs ----
+    mainPanel(
+
+      # Output: Histogram ----
+      plotOutput(outputId = "distPlot")
+
+    )
+  )
+)
+
+server <- function(input, output) {
+
+  # Histogram of the Old Faithful Geyser Data ----
+  # with requested number of bins
+  # This expression that generates a histogram is wrapped in a call
+  # to renderPlot to indicate that:
+  #
+  # 1. It is "reactive" and therefore should be automatically
+  #    re-executed when inputs (input$bins) change
+  # 2. Its output type is a plot
+  output$distPlot <- renderPlot({
+
+    x    <- faithful$waiting
+    bins <- seq(min(x), max(x), length.out = input$bins + 1)
+
+    hist(x, breaks = bins, col = "#75AADB", border = "white",
+         xlab = "Waiting time to next eruption (in mins)",
+         main = "Histogram of waiting times")
+
+    })
+
+}
+
+shinyApp(ui = ui, server = server)
+runApp("my_app")
+
 ```
 
 ```{r}
@@ -74,8 +159,21 @@ plot(importacion_super)
 
 ```
 ```{r}
+getwd()
 dec_cons_super <- decompose(Consumo_super)
-plot(dec_cons_super)
+plot(dec_cons_super$trend)
+cons_trend <- dec_cons_super$trend
+write.csv(cons_trend,"D:/UVG/2022/Semestre 2 2022/Data science/HDT8/LAB8_DATASCIENCE/export.csv", row.names = FALSE)
+
+
+
+getwd()
+dec_cons_super <- decompose(Consumo_super)
+plot(dec_cons_super$trend)
+cons_trend <- dec_cons_super$trend
+write.csv(cons_trend,"D:/UVG/2022/Semestre 2 2022/Data science/HDT8/LAB8_DATASCIENCE/export.csv", row.names = FALSE)
+
+
 ```
 
 
