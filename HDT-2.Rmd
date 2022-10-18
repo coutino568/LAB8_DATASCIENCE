@@ -20,13 +20,54 @@ library(tseries)
 library(fUnitRoots)
 library(ggfortify)
 library(readxl)
+library(ggplot2)
+library(shiny)
 getwd()
 df_consumo <- read_excel("CONSUMO-2022-05.xlsx", range="B7:G276")
 df_importacion <- read_excel("IMPORTACION-VOLUMEN-2022-05.xlsx", range="B7:G264")
 ```
+```{r}
+df_importacion
+```
+```{r}
+df_consumo$Diesel <- df_consumo$`Diesel alto azufre`+df_consumo$`Diesel bajo azufre`
+df_consumo$`Diesel alto azufre` <- NULL
+df_consumo$`Diesel bajo azufre` <- NULL
+df_consumo[4] <- NULL
+#head(df_consumo)
+
+#
+
+#summary(df_consumo)
+#plot(df_consumo$Fecha, df_consumo$`Gasolina superior`, xlab="FECHA", ylab="CONSUMO GASOLINA SUPERIOR", col= "blue")
+#points(df_consumo$Fecha, df_consumo$Diesel, col = "green", pch = 19)
+#points(df_consumo$Fecha, df_consumo$`Gasolina regular`, col = "red", pch = 19)
+
+#
+#height<- dnorm(df_consumo$`Gasolina superior`, mean(df_consumo$`Gasolina superior`), sd(df_consumo$`Gasolina #superior`))
+#plot(df_consumo$`Gasolina superior`, height)
+df_importacion$Diesel <- df_importacion$`Diesel alto azufre`+df_importacion$`Diesel bajo azufre`
+df_importacion$`Diesel alto azufre` <- NULL
+df_importacion$`Diesel bajo azufre` <- NULL
+df_importacion[4] <- NULL
+
+
+Consumo_Diesel <- ts(df_consumo$Diesel, start=c(2000, 1), frequency = 12)
+Consumo_regular <- ts(df_consumo$`Gasolina regular`, start=c(2000, 1), frequency = 12)
+Consumo_super <- ts(df_consumo$`Gasolina superior`, start=c(2000, 1), frequency = 12)
+importacion_Diesel <- ts(df_importacion$Diesel, start=c(2000, 1), frequency = 12)
+importacion_regular <- ts(df_importacion$`Gasolina regular`, start=c(2000, 1), frequency = 12)
+importacion_super <- ts(df_importacion$`Gasolina superior`, start=c(2000, 1), frequency = 12)
+
+dec_cons_Diesel <- decompose(Consumo_Diesel)
+dec_cons_Diesel$Date = time(Consumo_Diesel)
+plot(dec_cons_Diesel$Date, dec_cons_Diesel$trend + dec_cons_Diesel$seasonal + dec_cons_Diesel$random,  main="BRUH", 
+     ylab = "Barriles", xlab="Fecha", type="l")
+```
 
 ```{r}
-library(shiny)
+dec_cons_Diesel <- decompose(Consumo_Diesel)
+dec_cons_Diesel$Date = time(Consumo_Diesel)
 #runExample("01_hello")
 
 ui <- fluidPage(
@@ -41,7 +82,7 @@ ui <- fluidPage(
     sidebarPanel(
 
       # Input: Slider for the number of bins ----
-      sliderInput(inputId = "bins",
+      sliderInput(inputId = "bans",
                   label = "Number of bins:",
                   min = 1,
                  max = 50,
@@ -68,7 +109,7 @@ ui <- fluidPage(
         size = NULL
         ),
       dateRangeInput(
-  inputId = "DateRange",
+  inputId = "DDR",
   label = "Date Range",
   start = "2000-1-1",
   end = "2020-1-1",
@@ -92,7 +133,8 @@ ui <- fluidPage(
     mainPanel(
 
       # Output: Histogram ----
-      plotOutput(outputId = "distPlot")
+      plotOutput(outputId = "distPlot"),
+      plotOutput(outputId = "SamplePlot")
 
     )
   )
@@ -111,13 +153,23 @@ server <- function(input, output) {
   output$distPlot <- renderPlot({
 
     x    <- faithful$waiting
-    bins <- seq(min(x), max(x), length.out = input$bins + 1)
+    bins <- seq(min(x), max(x), length.out = input$bans + 1)
 
     hist(x, breaks = bins, col = "#75AADB", border = "white",
          xlab = "Waiting time to next eruption (in mins)",
          main = "Histogram of waiting times")
 
     })
+  output$SamplePlot <- renderPlot({
+    min <- input$bans
+    max <- input$bans
+    rango <- dec_cons_Diesel[dec_cons_Diesel$Date > min & dec_cons_Diesel$Date < max]
+
+            plot(rango$Date, rango$trend + rango$seasonal + rango$random,  
+         main="BRUH", ylab = "Barriles", xlab="Fecha", type="l")
+  })
+  
+
 
 }
 
@@ -125,29 +177,13 @@ shinyApp(ui = ui, server = server)
 runApp("my_app")
 
 ```
-
 ```{r}
-df_importacion
+rango <- dec_cons_Diesel[dec_cons_Diesel$Date >"2000-1-1" & dec_cons_Diesel$Date < "2010-1-1"]
+rango
 ```
-```{r}
-df_consumo$Diesel <- df_consumo$`Diesel alto azufre`+df_consumo$`Diesel bajo azufre`
-df_consumo$`Diesel alto azufre` <- NULL
-df_consumo$`Diesel bajo azufre` <- NULL
-df_consumo[4] <- NULL
-head(df_consumo)
 
 
 
-summary(df_consumo)
-plot(df_consumo$Fecha, df_consumo$`Gasolina superior`, xlab="FECHA", ylab="CONSUMO GASOLINA SUPERIOR", col= "blue")
-points(df_consumo$Fecha, df_consumo$Diesel, col = "green", pch = 19)
-points(df_consumo$Fecha, df_consumo$`Gasolina regular`, col = "red", pch = 19)
-
-
-height<- dnorm(df_consumo$`Gasolina superior`, mean(df_consumo$`Gasolina superior`), sd(df_consumo$`Gasolina superior`))
-plot(df_consumo$`Gasolina superior`, height)
-
-```
 ```{r}
 df_importacion$Diesel <- df_importacion$`Diesel alto azufre`+df_importacion$`Diesel bajo azufre`
 df_importacion$`Diesel alto azufre` <- NULL
@@ -178,7 +214,7 @@ getwd()
 dec_cons_super <- decompose(Consumo_super)
 plot(dec_cons_super$trend)
 cons_trend <- dec_cons_super$trend
-write.csv(cons_trend,"D:/UVG/2022/Semestre 2 2022/Data science/HDT8/LAB8_DATASCIENCE/export.csv", row.names = FALSE)
+write.csv(cons_trend,"/export.csv", row.names = FALSE)
 
 
 
@@ -186,7 +222,7 @@ getwd()
 dec_cons_super <- decompose(Consumo_super)
 plot(dec_cons_super$trend)
 cons_trend <- dec_cons_super$trend
-write.csv(cons_trend,"D:/UVG/2022/Semestre 2 2022/Data science/HDT8/LAB8_DATASCIENCE/export.csv", row.names = FALSE)
+write.csv(cons_trend,"/export.csv", row.names = FALSE)
 
 
 ```
@@ -194,7 +230,9 @@ write.csv(cons_trend,"D:/UVG/2022/Semestre 2 2022/Data science/HDT8/LAB8_DATASCI
 
 ```{r}
 dec_cons_Diesel <- decompose(Consumo_Diesel)
-plot(dec_cons_Diesel)
+dec_cons_Diesel$Date = time(Consumo_Diesel)
+plot(dec_cons_Diesel$Date, dec_cons_Diesel$trend + dec_cons_Diesel$seasonal + dec_cons_Diesel$random,  main="BRUH", 
+     ylab = "Barriles", xlab="Fecha", type="l")
 ```
 
 
