@@ -22,6 +22,7 @@ library(ggfortify)
 library(readxl)
 library(ggplot2)
 library(shiny)
+library(lubridate)
 getwd()
 df_consumo <- read_excel("CONSUMO-2022-05.xlsx", range="B7:G276")
 df_importacion <- read_excel("IMPORTACION-VOLUMEN-2022-05.xlsx", range="B7:G264")
@@ -60,9 +61,9 @@ importacion_regular <- ts(df_importacion$`Gasolina regular`, start=c(2000, 1), f
 importacion_super <- ts(df_importacion$`Gasolina superior`, start=c(2000, 1), frequency = 12)
 
 dec_cons_Diesel <- decompose(Consumo_Diesel)
-dec_cons_Diesel$Date = time(Consumo_Diesel)
-plot(dec_cons_Diesel$Date, dec_cons_Diesel$trend + dec_cons_Diesel$seasonal + dec_cons_Diesel$random,  main="BRUH", 
-     ylab = "Barriles", xlab="Fecha", type="l")
+#dec_cons_Diesel$Date = time(Consumo_Diesel)
+#plot(dec_cons_Diesel$Date, dec_cons_Diesel$trend + dec_cons_Diesel$seasonal + dec_cons_Diesel$random,  main="BRUH", 
+#     ylab = "Barriles", xlab="Fecha", type="l")
 ```
 
 ```{r}
@@ -73,7 +74,7 @@ dec_cons_Diesel$Date = time(Consumo_Diesel)
 ui <- fluidPage(
 
   # App title ----
-  titlePanel("COSNUMO DE COMBUSTIBLES"),
+  titlePanel("CONSUMO DE COMBUSTIBLES"),
 
   # Sidebar layout with input and output definitions ----
   sidebarLayout(
@@ -81,16 +82,10 @@ ui <- fluidPage(
     # Sidebar panel for inputs ----
     sidebarPanel(
 
-      # Input: Slider for the number of bins ----
-      sliderInput(inputId = "bans",
-                  label = "Number of bins:",
-                  min = 1,
-                 max = 50,
-                  value = 30),
 
       selectInput(
         inputId="typesOfFuel",
-        label="Types Of Fuel",
+        label="Tipos de combustible",
         list("SUPER","REGULAR","DIESEL"),
         selected = NULL,
         multiple = TRUE,
@@ -100,10 +95,20 @@ ui <- fluidPage(
         ),
       selectInput(
         inputId="typeOfMetric",
-        label="Types Of Fuel",
+        label="Datos de:",
         list("CONSUMO","IMPORTACION"),
         selected = NULL,
         multiple = FALSE,
+        selectize = TRUE,
+        width = NULL,
+        size = NULL
+        ),
+        selectInput(
+        inputId="DataSlicesShown",
+        label="Mostrar:",
+        list("TENDENCIA, ESTACIONALIDAD, RUIDO"),
+        selected = TRUE,
+        multiple = TRUE,
         selectize = TRUE,
         width = NULL,
         size = NULL
@@ -161,9 +166,16 @@ server <- function(input, output) {
 
     })
   output$SamplePlot <- renderPlot({
-    min <- input$bans
-    max <- input$bans
-    rango <- dec_cons_Diesel[dec_cons_Diesel$Date > min & dec_cons_Diesel$Date < max]
+    
+
+
+    min <- c(year(input$DDR[1]), month(input$DDR[1]))
+    max <- c(year(input$DDR[2]), month(input$DDR[2]))
+
+    rango$Date <- window(dec_cons_Diesel$Date, min, max)
+    rango$trend <- window(dec_cons_Diesel$trend, min, max)
+    rango$seasonal <- window(dec_cons_Diesel$seasonal, min, max)
+    rango$random <- window(dec_cons_Diesel$random, min, max)
 
             plot(rango$Date, rango$trend + rango$seasonal + rango$random,  
          main="BRUH", ylab = "Barriles", xlab="Fecha", type="l")
@@ -178,8 +190,7 @@ runApp("my_app")
 
 ```
 ```{r}
-rango <- dec_cons_Diesel[dec_cons_Diesel$Date >"2000-1-1" & dec_cons_Diesel$Date < "2010-1-1"]
-rango
+window(dec_cons_Diesel$x, start=c(2001, 8), end=c(2010, 3))
 ```
 
 
