@@ -7,7 +7,8 @@ date: '2022-08-01'
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-install.packages("shiny")
+#install.packages("shiny")
+install.packages("plotly")
 ```
 
 ```{r}
@@ -23,6 +24,7 @@ library(readxl)
 library(ggplot2)
 library(shiny)
 library(lubridate)
+library(plotly)
 getwd()
 df_consumo <- read_excel("CONSUMO-2022-05.xlsx", range="B7:G276")
 df_importacion <- read_excel("IMPORTACION-VOLUMEN-2022-05.xlsx", range="B7:G264")
@@ -60,7 +62,7 @@ importacion_Diesel <- ts(df_importacion$Diesel, start=c(2000, 1), frequency = 12
 importacion_regular <- ts(df_importacion$`Gasolina regular`, start=c(2000, 1), frequency = 12)
 importacion_super <- ts(df_importacion$`Gasolina superior`, start=c(2000, 1), frequency = 12)
 
-dec_cons_Diesel <- decompose(Consumo_Diesel)
+
 #dec_cons_Diesel$Date = time(Consumo_Diesel)
 #plot(dec_cons_Diesel$Date, dec_cons_Diesel$trend + dec_cons_Diesel$seasonal + dec_cons_Diesel$random,  main="BRUH", 
 #     ylab = "Barriles", xlab="Fecha", type="l")
@@ -69,8 +71,27 @@ dec_cons_Diesel <- decompose(Consumo_Diesel)
 ```{r}
 dec_cons_Diesel <- decompose(Consumo_Diesel)
 dec_cons_Diesel$Date = time(Consumo_Diesel)
-#runExample("01_hello")
+dec_imp_Diesel <- decompose(importacion_Diesel)
+dec_imp_Diesel$Date = time(importacion_Diesel)
 
+dec_cons_super <- decompose(Consumo_super)
+dec_cons_super$Date <- time(Consumo_super)
+dec_imp_super <- decompose(importacion_super)
+dec_imp_super$Date <- time(importacion_super)
+
+dec_cons_regular <- decompose(Consumo_regular)
+dec_cons_regular$Date <- time(Consumo_regular)
+dec_imp_regular <- decompose(importacion_regular)
+dec_imp_regular$Date <- time(importacion_regular)
+
+```
+
+```{r}
+pallette = c(rgb(71/255, 169/255, 247/255), rgb(111/255, 59/255, 128/255), rgb(76/255, 16/255, 54/255))
+```
+
+
+```{r}
 ui <- fluidPage(
 
   # App title ----
@@ -79,67 +100,71 @@ ui <- fluidPage(
   # Sidebar layout with input and output definitions ----
   sidebarLayout(
 
+    
     # Sidebar panel for inputs ----
     sidebarPanel(
+        helpText("Seleccione la información que desea visualizar:"),
 
-
-      selectInput(
+      checkboxGroupInput(
         inputId="typesOfFuel",
         label="Tipos de combustible",
         list("SUPER","REGULAR","DIESEL"),
-        selected = NULL,
-        multiple = TRUE,
-        selectize = TRUE,
-        width = NULL,
-        size = NULL
+        selected = "DIESEL"
         ),
       selectInput(
         inputId="typeOfMetric",
         label="Datos de:",
         list("CONSUMO","IMPORTACION"),
-        selected = NULL,
+        selected = "CONSUMO",
         multiple = FALSE,
         selectize = TRUE,
         width = NULL,
         size = NULL
         ),
-        selectInput(
+        checkboxGroupInput(
         inputId="DataSlicesShown",
         label="Mostrar:",
-        list("TENDENCIA, ESTACIONALIDAD, RUIDO"),
-        selected = TRUE,
-        multiple = TRUE,
-        selectize = TRUE,
-        width = NULL,
-        size = NULL
+        choices = list("TENDENCIA", "ESTACIONALIDAD", "RUIDO"),
+        selected = "TENDENCIA"
         ),
       dateRangeInput(
-  inputId = "DDR",
-  label = "Date Range",
-  start = "2000-1-1",
-  end = "2020-1-1",
-  min = "2000-1-1",
-  max = "2020-1-1",
-  format = "yyyy-mm-dd",
-  startview = "month",
-  weekstart = 0,
-  language = "en",
-  separator = " to ",
-  width = NULL,
-  autoclose = TRUE
-)
+        inputId = "DDR",
+        label = "Mostrar desde:",
+        start = "2000-1-1",
+        end = "2020-5-1",
+        min = "2000-1-1",
+        max = "2020-5-1",
+        format = "dd-M-yyyy",
+        startview = "month",
+        weekstart = 0,
+        language = "es",
+        separator = " a ",
+        width = NULL,
+        autoclose = TRUE
+        ),
+      dateInput(
+        inputId = "BarsMonth",
+        label = "Mes para diagrama de barras:",
+        value = "2000-1-1",
+        min = "2000-5-1",
+        max = "2020-5-1",
+        format = "yyyy-M",
+        startview = "month",
+        weekstart = 0,
+        language = "es"
+      )
       
       
       
       ),
     
 
-    # Main panel for displaying outputs ----
-    mainPanel(
 
-      # Output: Histogram ----
-      plotOutput(outputId = "distPlot"),
-      plotOutput(outputId = "SamplePlot")
+    mainPanel(
+      verticalLayout(
+      plotlyOutput(outputId = "MainPlot"),
+      plotlyOutput(outputId = "BarPlot")
+      )
 
     )
   )
@@ -147,38 +172,79 @@ ui <- fluidPage(
 
 server <- function(input, output) {
 
-  # Histogram of the Old Faithful Geyser Data ----
-  # with requested number of bins
-  # This expression that generates a histogram is wrapped in a call
-  # to renderPlot to indicate that:
-  #
-  # 1. It is "reactive" and therefore should be automatically
-  #    re-executed when inputs (input$bins) change
-  # 2. Its output type is a plot
-  output$distPlot <- renderPlot({
-
-    x    <- faithful$waiting
-    bins <- seq(min(x), max(x), length.out = input$bans + 1)
-
-    hist(x, breaks = bins, col = "#75AADB", border = "white",
-         xlab = "Waiting time to next eruption (in mins)",
-         main = "Histogram of waiting times")
-
-    })
-  output$SamplePlot <- renderPlot({
-    
 
 
+  output$MainPlot <- renderPlotly({
     min <- c(year(input$DDR[1]), month(input$DDR[1]))
     max <- c(year(input$DDR[2]), month(input$DDR[2]))
+    
 
-    rango$Date <- window(dec_cons_Diesel$Date, min, max)
-    rango$trend <- window(dec_cons_Diesel$trend, min, max)
-    rango$seasonal <- window(dec_cons_Diesel$seasonal, min, max)
-    rango$random <- window(dec_cons_Diesel$random, min, max)
+    
+    IsConsumo <- "CONSUMO" == input$typeOfMetric
+    Weight_Tendency <- if ("TENDENCIA" %in% input$DataSlicesShown) 42 else 0
+    Weight_Seasonal <- if ("ESTACIONALIDAD" %in% input$DataSlicesShown) 42 else 0
+    Weight_Noise <- if ("RUIDO" %in% input$DataSlicesShown) 42 else 0
+    
+    Want_Diesel  <- "DIESEL" %in% input$typesOfFuel 
+    Want_Regular <- "REGULAR" %in% input$typesOfFuel
+    Want_Super   <- "SUPER" %in% input$typesOfFuel
+    
+    Diesel_desc <- if (IsConsumo) dec_cons_Diesel else dec_imp_Diesel
+    Regular_desc <- if (IsConsumo) dec_cons_regular else dec_imp_regular
+    Super_desc <- if (IsConsumo) dec_cons_super else dec_imp_super
 
-            plot(rango$Date, rango$trend + rango$seasonal + rango$random,  
-         main="BRUH", ylab = "Barriles", xlab="Fecha", type="l")
+    Date <-  window(Diesel_desc$Date, min, max)
+    D_trend <- window(Diesel_desc$trend, min, max) * (Weight_Tendency)
+    D_seasonal <- window(Diesel_desc$seasonal, min, max) * (Weight_Seasonal)
+    D_random <-   window(Diesel_desc$random, min, max) * (Weight_Noise)
+    
+    R_trend <-    window(Regular_desc$trend, min, max) * (Weight_Tendency)
+    R_seasonal <- window(Regular_desc$seasonal, min, max) * (Weight_Seasonal)
+    R_random <-   window(Regular_desc$random, min, max) * (Weight_Noise)
+    
+    S_trend <-    window(Super_desc$trend, min, max) * (Weight_Tendency)
+    S_seasonal <- window(Super_desc$seasonal, min, max) * (Weight_Seasonal)
+    S_random <-   window(Super_desc$random, min, max) * (Weight_Noise)
+    
+    total_diesel <- D_trend + D_seasonal + D_random
+    total_regular <- R_trend + R_seasonal + R_random
+    total_super <- S_trend + S_seasonal + S_random
+    plotData <- data.frame(Date, total_diesel, total_regular, total_super)
+    
+    
+    fig <- plot_ly(data= plotData, x=~Date)
+    
+    if (Want_Diesel){
+    fig <- fig %>% add_trace(y=~total_diesel, 
+                   line = list(color = pallette[1], width = 1.5), name= "Diesel", type = 'scatter', mode = 'lines')
+    }
+    if (Want_Regular){
+    fig <- fig %>% add_trace(y = ~total_regular, line = list(color = pallette[2], width = 1.5), 
+                             name= "Gasolina regular", type = 'scatter', mode = 'lines')
+    }
+    if (Want_Super){
+    fig <- fig %>% add_trace(y = ~total_super, line = list(color = pallette[3], width = 1.5), 
+                             name= "Gasolina superior", type = 'scatter', mode = 'lines')
+    }
+    
+    fig <- fig %>% layout(title = if (IsConsumo) "Consumo de combustibles" else "Importación de combustibles",
+         xaxis = list(title = "Fecha"),
+         yaxis = list (title = "Galones"))
+    
+    
+    fig
+  })
+  output$BarPlot <- renderPlotly({
+        monthFactor <- c(year(input$BarsMonth), month(input$BarsMonth))
+
+        
+        fig <- plot_ly(
+          x = c("giraffes", "orangutans", "monkeys"),
+          y = c(20, 14, 23),
+          name = "SF Zoo",
+          type = "bar")
+        
+        fig
   })
   
 
@@ -190,18 +256,10 @@ runApp("my_app")
 
 ```
 ```{r}
-window(dec_cons_Diesel$x, start=c(2001, 8), end=c(2010, 3))
+window(dec_cons_Diesel$x, start=c(2010, 3), end=c(2010, 3))
 ```
 
 
-
-```{r}
-df_importacion$Diesel <- df_importacion$`Diesel alto azufre`+df_importacion$`Diesel bajo azufre`
-df_importacion$`Diesel alto azufre` <- NULL
-df_importacion$`Diesel bajo azufre` <- NULL
-df_importacion[4] <- NULL
-head(df_importacion)
-```
 ```{r}
 
 Consumo_Diesel <- ts(df_consumo$Diesel, start=c(2000, 1), frequency = 12)
