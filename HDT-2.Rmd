@@ -504,6 +504,28 @@ fit_consumo_regular <- arima(log(Consumo_regular), c(1, 1, 1),seasonal = list(or
 forecastAP_Consumo_Regular <- forecast(fit_consumo_regular, level = c(95), h = 3*12)
 autoplot(forecastAP_Consumo_Regular)
 
+pred <- predict(fit_consumo_regular, n.ahead = 3*12)
+ts.plot(Consumo_regular,2.756^pred$pred, log = "y", lty = c(1,3))
+
+merged_ts <- ts(c(Consumo_regular, 2.756^pred$pred),               
+   start = start(Consumo_regular),
+   frequency = frequency(Consumo_regular))
+merged_ts
+
+ts.plot(merged_ts)
+
+converted <- fortify(
+  merged_ts,
+  data = NULL,
+  columns = NULL,
+  is.date = NULL,
+  index.name = "Index",
+  data.name = "Data",
+  scale = FALSE,
+  melt = FALSE
+)
+write.csv(converted,"consumo_regular_model.csv", row.names = FALSE)
+
 ## super
 auto.arima(Consumo_super)
 
@@ -512,11 +534,59 @@ forecastAP_Consumo_Super <- forecast(fit_consumo_super, level = c(95), h = 3*12)
 autoplot(forecastAP_Consumo_Super)
 
 
+
+pred <- predict(fit_consumo_super, n.ahead = 3*12)
+ts.plot(Consumo_super,2.756^pred$pred, log = "y", lty = c(1,3))
+
+merged_ts <- ts(c(Consumo_super, 2.756^pred$pred),               
+   start = start(Consumo_super),
+   frequency = frequency(Consumo_super))
+merged_ts
+
+ts.plot(merged_ts)
+
+converted <- fortify(
+  merged_ts,
+  data = NULL,
+  columns = NULL,
+  is.date = NULL,
+  index.name = "Index",
+  data.name = "Data",
+  scale = FALSE,
+  melt = FALSE
+)
+write.csv(converted,"consumo_super_model.csv", row.names = FALSE)
+
+
 auto.arima(importacion_super)
 
 fit_importacion_super <- arima(log(importacion_super), c(2, 1, 1),seasonal = list(order = c(2, 0, 0), period = 12))
 forecastAP_importacion_Super <- forecast(fit_importacion_super, level = c(95), h = 3*12)
 autoplot(forecastAP_importacion_Super)
+
+
+
+pred <- predict(fit_importacion_super, n.ahead = 3*12)
+ts.plot(importacion_super,2.756^pred$pred, log = "y", lty = c(1,3))
+
+merged_ts <- ts(c(importacion_super, 2.756^pred$pred),               
+   start = start(importacion_super),
+   frequency = frequency(importacion_super))
+merged_ts
+
+ts.plot(merged_ts)
+
+converted <- fortify(
+  merged_ts,
+  data = NULL,
+  columns = NULL,
+  is.date = NULL,
+  index.name = "Index",
+  data.name = "Data",
+  scale = FALSE,
+  melt = FALSE
+)
+write.csv(converted,"importacion_super_model.csv", row.names = FALSE)
 
 
 ```
