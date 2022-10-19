@@ -28,6 +28,7 @@ library(plotly)
 getwd()
 df_consumo <- read_excel("CONSUMO-2022-05.xlsx", range="B7:G276")
 df_importacion <- read_excel("IMPORTACION-VOLUMEN-2022-05.xlsx", range="B7:G264")
+
 ```
 ```{r}
 df_importacion
@@ -398,10 +399,17 @@ fit_consumo_diesel <- arima(log(Consumo_Diesel), c(3, 0, 1),seasonal = list(orde
 forecastAP_Consumo_Diesel <- forecast(fit_consumo_diesel, level = c(95), h = 3*12)
 autoplot(forecastAP_Consumo_Diesel)
 
+
+
 pred <- predict(fit_consumo_diesel, n.ahead = 3*12)
 ts.plot(Consumo_Diesel,2.756^pred$pred, log = "y", lty = c(1,3))
 
+merged_ts <- ts(c(Consumo_Diesel, 2.756^pred$pred),               
+   start = start(Consumo_Diesel),
+   frequency = frequency(Consumo_Diesel))
+merged_ts
 
+write.csv(merged_ts,"consumo_diesel_model.csv", row.names = FALSE)
 
 
 auto.arima(importacion_Diesel)
