@@ -409,7 +409,20 @@ merged_ts <- ts(c(Consumo_Diesel, 2.756^pred$pred),
    frequency = frequency(Consumo_Diesel))
 merged_ts
 
-write.csv(merged_ts,"consumo_diesel_model.csv", row.names = FALSE)
+ts.plot(merged_ts)
+
+converted <- fortify(
+  merged_ts,
+  data = NULL,
+  columns = NULL,
+  is.date = NULL,
+  index.name = "Index",
+  data.name = "Data",
+  scale = FALSE,
+  melt = FALSE
+)
+write.csv(converted,"consumo_diesel_model.csv", row.names = FALSE)
+
 
 
 auto.arima(importacion_Diesel)
