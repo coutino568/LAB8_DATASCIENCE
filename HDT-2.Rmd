@@ -26,14 +26,13 @@ library(shiny)
 library(lubridate)
 library(plotly)
 getwd()
+```
+
+
+```{r}
 df_consumo <- read_excel("CONSUMO-2022-05.xlsx", range="B7:G276")
 df_importacion <- read_excel("IMPORTACION-VOLUMEN-2022-05.xlsx", range="B7:G264")
 
-```
-```{r}
-df_importacion
-```
-```{r}
 df_consumo$Diesel <- df_consumo$`Diesel alto azufre`+df_consumo$`Diesel bajo azufre`
 df_consumo$`Diesel alto azufre` <- NULL
 df_consumo$`Diesel bajo azufre` <- NULL
@@ -64,26 +63,46 @@ importacion_regular <- ts(df_importacion$`Gasolina regular`, start=c(2000, 1), f
 importacion_super <- ts(df_importacion$`Gasolina superior`, start=c(2000, 1), frequency = 12)
 
 
-#dec_cons_Diesel$Date = time(Consumo_Diesel)
-#plot(dec_cons_Diesel$Date, dec_cons_Diesel$trend + dec_cons_Diesel$seasonal + dec_cons_Diesel$random,  main="BRUH", 
-#     ylab = "Barriles", xlab="Fecha", type="l")
+
 ```
 
 ```{r}
-dec_cons_Diesel <- decompose(Consumo_Diesel)
-dec_cons_Diesel$Date = time(Consumo_Diesel)
-dec_imp_Diesel <- decompose(importacion_Diesel)
-dec_imp_Diesel$Date = time(importacion_Diesel)
+ConsDieselModel<-read.csv("consumo_diesel_model.csv")
+ConsDieselModel<-ts(ConsDieselModel$Data, start=c(2000, 1), frequency = 12)
 
-dec_cons_super <- decompose(Consumo_super)
-dec_cons_super$Date <- time(Consumo_super)
-dec_imp_super <- decompose(importacion_super)
-dec_imp_super$Date <- time(importacion_super)
+ImpDieselModel<-read.csv("importacion_diesel_model.csv")
+ImpDieselModel<-ts(ImpDieselModel$Data, start=c(2000, 1), frequency = 12)
 
-dec_cons_regular <- decompose(Consumo_regular)
-dec_cons_regular$Date <- time(Consumo_regular)
-dec_imp_regular <- decompose(importacion_regular)
-dec_imp_regular$Date <- time(importacion_regular)
+ConsRegModel<-read.csv("consumo_regular_model.csv")
+ConsRegModel<-ts(ConsRegModel$Data, start=c(2000, 1), frequency = 12)
+
+ImpRegModel<-read.csv("importacion_regular_model.csv")
+ImpRegModel<-ts(ImpRegModel$Data, start=c(2000, 1), frequency = 12)
+
+ConsSuperModel<-read.csv("consumo_super_model.csv")
+ConsSuperModel<-ts(ConsSuperModel$Data, start=c(2000, 1), frequency = 12)
+
+ImpSuperModel<-read.csv("importacion_super_model.csv")
+ImpSuperModel<-ts(ImpSuperModel$Data, start=c(2000, 1), frequency = 12)
+```
+
+
+```{r}
+
+dec_cons_Diesel <- decompose(ConsDieselModel)
+dec_cons_Diesel$Date = time(ConsDieselModel)
+dec_imp_Diesel <- decompose(ImpDieselModel)
+dec_imp_Diesel$Date = time(ImpDieselModel)
+
+dec_cons_super <- decompose(ConsSuperModel)
+dec_cons_super$Date <- time(ConsSuperModel)
+dec_imp_super <- decompose(ImpSuperModel)
+dec_imp_super$Date <- time(ImpSuperModel)
+
+dec_cons_regular <- decompose(ConsRegModel)
+dec_cons_regular$Date <- time(ConsRegModel)
+dec_imp_regular <- decompose(ImpRegModel)
+dec_imp_regular$Date <- time(ImpRegModel)
 
 ```
 
@@ -132,9 +151,9 @@ ui <- fluidPage(
         inputId = "DDR",
         label = "Mostrar desde:",
         start = "2000-1-1",
-        end = "2020-5-1",
+        end = "2025-5-1",
         min = "2000-1-1",
-        max = "2020-5-1",
+        max = "2025-5-1",
         format = "dd-M-yyyy",
         startview = "month",
         weekstart = 0,
@@ -148,8 +167,8 @@ ui <- fluidPage(
         label = "Mes para diagrama de barras:",
         value = "2000-5-1",
         min = "2000-5-1",
-        max = "2020-5-1",
-        format = "yyyy-M",
+        max = "2025-5-1",
+        format = "M-yyyy",
         startview = "month",
         weekstart = 0,
         language = "es"
@@ -240,23 +259,38 @@ server <- function(input, output) {
         monthFactor <- c(year(input$BarsMonth), month(input$BarsMonth))
         print(monthFactor)
         
-        IsConsumo <- "CONSUMO" == input$typeOfMetric
+       
     
         
-        Diesel_desc <- if (IsConsumo) dec_cons_Diesel else dec_imp_Diesel
-        Diesel_desc <- window(Diesel_desc$x, monthFactor, monthFactor)
-        Regular_desc <- if (IsConsumo) dec_cons_regular else dec_imp_regular
-        Regular_desc <- window(Regular_desc$x, monthFactor, monthFactor)
-        Super_desc <- if (IsConsumo) dec_cons_super else dec_imp_super
-        Super_desc <- window(Super_desc$x, monthFactor, monthFactor)
+        Cons_Diesel_desc <- dec_cons_Diesel 
+        Cons_Diesel_desc <- window(Cons_Diesel_desc$x, monthFactor, monthFactor)
+        Cons_Regular_desc <- dec_cons_regular
+        Cons_Regular_desc <- window(Cons_Regular_desc$x, monthFactor, monthFactor)
+        Cons_Super_desc <- dec_cons_super 
+        Cons_Super_desc <- window(Cons_Super_desc$x, monthFactor, monthFactor)
+        
+        
+        Imp_Diesel_desc <- dec_imp_Diesel 
+        Imp_Diesel_desc <- window(Imp_Diesel_desc$x, monthFactor, monthFactor)
+        Imp_Regular_desc <- dec_imp_regular
+        Imp_Regular_desc <- window(Imp_Regular_desc$x, monthFactor, monthFactor)
+        Imp_Super_desc <- dec_imp_super 
+        Imp_Super_desc <- window(Imp_Super_desc$x, monthFactor, monthFactor)
         
         
         fig <- plot_ly(
           x = c("Diesel", "Regular", "Super"),
-          y = c(Diesel_desc, Regular_desc, Super_desc),
-          name = if (IsConsumo) "Consumo de combustibles" else "Importación de combustibles",
-          type = "bar")
-        
+          y = c(Cons_Diesel_desc, Cons_Regular_desc, Cons_Super_desc),
+          name = "Consumo de combustibles",
+          type = "bar",
+          marker = list(color = pallette[2],
+                      line = list(color = 'rgb(0,0,0)',
+                                  width = 1.5)))
+        fig <- fig %>% add_trace(y = c(Imp_Diesel_desc, Imp_Regular_desc, Imp_Super_desc), name = "Importación de combustibles",
+          marker = list(color = pallette[1],
+                      line = list(color = 'rgb(0,0,0)',
+                                  width = 1.5)))
+        fig <- fig %>% layout(yaxis = list(title = 'Barriles'), barmode = 'stack')
         fig
   })
   
@@ -271,6 +305,7 @@ runApp("my_app")
 ```{r}
 window(dec_cons_Diesel$x, start=c(2010, 3), end=c(2010, 3))
 ```
+
 
 
 ```{r}
