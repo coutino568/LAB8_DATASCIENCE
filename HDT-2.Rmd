@@ -145,7 +145,7 @@ ui <- fluidPage(
       dateInput(
         inputId = "BarsMonth",
         label = "Mes para diagrama de barras:",
-        value = "2000-1-1",
+        value = "2000-5-1",
         min = "2000-5-1",
         max = "2020-5-1",
         format = "yyyy-M",
@@ -172,18 +172,14 @@ ui <- fluidPage(
 
 server <- function(input, output) {
 
-
+    
 
   output$MainPlot <- renderPlotly({
     min <- c(year(input$DDR[1]), month(input$DDR[1]))
     max <- c(year(input$DDR[2]), month(input$DDR[2]))
-    
 
     
     IsConsumo <- "CONSUMO" == input$typeOfMetric
-    Weight_Tendency <- if ("TENDENCIA" %in% input$DataSlicesShown) 42 else 0
-    Weight_Seasonal <- if ("ESTACIONALIDAD" %in% input$DataSlicesShown) 42 else 0
-    Weight_Noise <- if ("RUIDO" %in% input$DataSlicesShown) 42 else 0
     
     Want_Diesel  <- "DIESEL" %in% input$typesOfFuel 
     Want_Regular <- "REGULAR" %in% input$typesOfFuel
@@ -192,6 +188,11 @@ server <- function(input, output) {
     Diesel_desc <- if (IsConsumo) dec_cons_Diesel else dec_imp_Diesel
     Regular_desc <- if (IsConsumo) dec_cons_regular else dec_imp_regular
     Super_desc <- if (IsConsumo) dec_cons_super else dec_imp_super
+    
+    Weight_Tendency <- if ("TENDENCIA" %in% input$DataSlicesShown) 42 else 0
+    Weight_Seasonal <- if ("ESTACIONALIDAD" %in% input$DataSlicesShown) 42 else 0
+    Weight_Noise <- if ("RUIDO" %in% input$DataSlicesShown) 42 else 0
+
 
     Date <-  window(Diesel_desc$Date, min, max)
     D_trend <- window(Diesel_desc$trend, min, max) * (Weight_Tendency)
@@ -236,12 +237,23 @@ server <- function(input, output) {
   })
   output$BarPlot <- renderPlotly({
         monthFactor <- c(year(input$BarsMonth), month(input$BarsMonth))
-
+        print(monthFactor)
+        
+        IsConsumo <- "CONSUMO" == input$typeOfMetric
+    
+        
+        Diesel_desc <- if (IsConsumo) dec_cons_Diesel else dec_imp_Diesel
+        Diesel_desc <- window(Diesel_desc$x, monthFactor, monthFactor)
+        Regular_desc <- if (IsConsumo) dec_cons_regular else dec_imp_regular
+        Regular_desc <- window(Regular_desc$x, monthFactor, monthFactor)
+        Super_desc <- if (IsConsumo) dec_cons_super else dec_imp_super
+        Super_desc <- window(Super_desc$x, monthFactor, monthFactor)
+        
         
         fig <- plot_ly(
-          x = c("giraffes", "orangutans", "monkeys"),
-          y = c(20, 14, 23),
-          name = "SF Zoo",
+          x = c("Diesel", "Regular", "Super"),
+          y = c(Diesel_desc, Regular_desc, Super_desc),
+          name = if (IsConsumo) "Consumo de combustibles" else "Importación de combustibles",
           type = "bar")
         
         fig
